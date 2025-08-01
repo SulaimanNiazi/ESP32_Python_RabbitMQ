@@ -3,7 +3,11 @@
 
 Preferences prefs;
 
+#define BOOT_BUTTON 0
+
 void setup() {
+  pinMode(BOOT_BUTTON, INPUT_PULLUP);  // Enable internal pull-up
+  
   Serial.begin(115200);
   while(!Serial);
 
@@ -35,6 +39,7 @@ void setup() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    checkBootButton();
   }
 
   Serial.println("");
@@ -44,7 +49,19 @@ void setup() {
 }
 
 void loop(){
-  
+  checkBootButton();
+}
+
+void checkBootButton(){
+  if(digitalRead(BOOT_BUTTON) == LOW) {
+    delay(200);
+    if(digitalRead(BOOT_BUTTON) == LOW){
+      prefs.begin("nvm-test", false);
+      prefs.clear();
+      prefs.end();
+      ESP.restart();
+    }
+  }
 }
 
 String readUART() {

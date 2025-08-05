@@ -27,16 +27,11 @@ void setup() {
   mqttPass = prefs.getString("mqtt_pass", "");
 
   if((ssid == "")||(ip == "")||(username == "")){
-    Serial.print("Enter SSID: ");
-    ssid = readUART();
-    Serial.print("Enter Password: ");
-    wifiPass = readUART();
-    Serial.print("Enter mqtt server IP: ");
-    ip = readUART();
-    Serial.print("Enter mqtt server username: ");
-    username = readUART();
-    Serial.print("Enter mqtt server password: ");
-    mqttPass = readUART();
+    ssid = readUART("Enter SSID: ");
+    wifiPass = readUART("Enter Password: ");
+    ip = readUART("Enter mqtt server IP: ");
+    username = readUART("Enter mqtt server username: ");
+    mqttPass = readUART("Enter mqtt server password: ");
 
     prefs.putString("ssid", ssid);
     prefs.putString("password", wifiPass);
@@ -47,11 +42,7 @@ void setup() {
 
   prefs.end();
 
-  
-
-  Serial.println();
-  Serial.println();
-  Serial.print("Connecting to ");
+  Serial.print("\n\nConnecting to ");
   Serial.println(ssid);
 
   WiFi.begin(ssid, wifiPass);
@@ -108,8 +99,9 @@ bool checkBootButton(){
   return false;
 }
 
-String readUART() {
+String readUART(String prompt) {
   String input = "";
+  Serial.print(prompt);
   while(1){
     if (Serial.available() > 0){                         // Wait for the UART recieve buffer to get a byte
       byte inByte = Serial.read();                        // Read the byte from UART
@@ -134,8 +126,10 @@ String readUART() {
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Attempt to connect
+    Serial.print("Attempting MQTT connection with username, ");
+    Serial.print(mqtt_user);
+    Serial.println(" ...");
+    
     if (client.connect("ESP32_MQTT", mqtt_user, mqtt_pass)) {
       Serial.println("Connected");
     }else{

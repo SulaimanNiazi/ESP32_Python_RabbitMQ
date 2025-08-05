@@ -50,7 +50,7 @@ void setup() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
-    checkBootButton();
+    checkBootButton(0);
   }
 
   Serial.println("");
@@ -80,23 +80,23 @@ void loop(){
   Serial.print("value:");
   Serial.println(msg);
 
-  while(!checkBootButton()){
-    delay(5000);
-    break;
-  }
+  checkBootButton(5);
 }
 
-bool checkBootButton(){
-  if(digitalRead(BOOT_BUTTON) == LOW) {
-    delay(200);
-    if(digitalRead(BOOT_BUTTON) == LOW){
-      prefs.begin("login-details", false);
-      prefs.clear();
-      prefs.end();
-      ESP.restart();
+void checkBootButton(unsigned int seconds){
+  unsigned int loops = seconds*5;
+  while(loops-- > 0){
+    if(digitalRead(BOOT_BUTTON) == LOW) {
+      delay(200);
+      if(digitalRead(BOOT_BUTTON) == LOW){
+        prefs.begin("login-details", false);
+        prefs.clear();
+        prefs.end();
+        ESP.restart();
+      }
     }
+    delay(200);
   }
-  return false;
 }
 
 String readUART(String prompt) {
@@ -129,18 +129,14 @@ void reconnect() {
     Serial.print("Attempting MQTT connection with username, ");
     Serial.print(mqtt_user);
     Serial.println(" ...");
-    
+
     if (client.connect("ESP32_MQTT", mqtt_user, mqtt_pass)) {
       Serial.println("Connected");
     }else{
       Serial.print("Failed, rc=");
       Serial.print(client.state());
       Serial.println(" trying again in 5 seconds...");
-
-      while(!checkBootButton()){
-        delay(5000);
-        break;
-      }
+      checkBootButton(5);
     }
   }
 }

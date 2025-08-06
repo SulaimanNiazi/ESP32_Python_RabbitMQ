@@ -4,8 +4,7 @@
 
 #define BOOT_BUTTON 0
 
-char mqtt_user[20];
-char mqtt_pass[20];
+char mqtt_user [20], mqtt_pass [20], ID [20], routingKey [20];
 int count = 0;
 
 Preferences prefs;
@@ -21,29 +20,36 @@ void setup() {
   prefs.begin("login-details", false);
 
   String ssid = prefs.getString("ssid", ""),
-  wifiPass = prefs.getString("password", ""),
-  ip = prefs.getString("mqtt_server", ""),
-  username = prefs.getString("mqtt_user", ""),
-  mqttPass = prefs.getString("mqtt_pass", "");
+    wifiPass = prefs.getString("wifi password", ""),
+    ip = prefs.getString("IP", ""),
+    username = prefs.getString("username", ""),
+    mqttPass = prefs.getString("mqtt password", ""),
+    id = prefs.getString("ID", "ESP32_MQTT"),
+    key = prefs.getString("routing key", "");
 
-  if((ssid == "")||(ip == "")||(username == "")){
+  if((ssid == "") || (ip == "") || (username == "") || (key == "")){
     ssid = readUART("Enter SSID: ");
     wifiPass = readUART("Enter Password: ");
     ip = readUART("Enter mqtt server IP: ");
     username = readUART("Enter mqtt server username: ");
     mqttPass = readUART("Enter mqtt server password: ");
+    key = readUART("Enter Routing Key to use: ");
+    id = readUART("Enter ID for this device (optional): ");
 
     prefs.putString("ssid", ssid);
-    prefs.putString("password", wifiPass);
-    prefs.putString("mqtt_server", ip);
-    prefs.putString("mqtt_user", username);
-    prefs.putString("mqtt_pass", mqttPass);
+    prefs.putString("wifi password", wifiPass);
+    prefs.putString("IP", ip);
+    prefs.putString("username", username);
+    prefs.putString("mqtt password", mqttPass);
+    prefs.putString("routing key", key);
+    prefs.putString("ID", id);
   }
 
   prefs.end();
 
   Serial.print("\n\nConnecting to ");
-  Serial.println(ssid);
+  Serial.print(ssid);
+  Serial.print(" ");
 
   WiFi.begin(ssid, wifiPass);
 
@@ -53,17 +59,17 @@ void setup() {
     checkBootButton(0);
   }
 
-  Serial.println("");
-  Serial.println("WiFi connected.");
-  Serial.println("IP address: ");
+  Serial.println("\n\nWiFi Connected\nIP address: ");
   Serial.println(WiFi.localIP());
 
   static char mqtt_server [16];
   ip.toCharArray(mqtt_server, sizeof(mqtt_server));
   username.toCharArray(mqtt_user, sizeof(mqtt_user));
   mqttPass.toCharArray(mqtt_pass, sizeof(mqtt_pass));
+  key.toCharArray(routingKey, sizeof(routingKey));
+  id.toCharArray(ID, sizeof(ID));
 
-  Serial.print("Setting server at IP: ");
+  Serial.print("\nSetting server at IP: ");
   Serial.println(mqtt_server);
   client.setServer(mqtt_server, 1883);
 }
@@ -76,16 +82,16 @@ void loop(){
   }
 
   sprintf(msg,"%d",count++);
-  client.publish("mqtt_topic", msg);
-  Serial.print("value:");
+  client.publish(routingKey, msg);
+  Serial.print("message sent: ");
   Serial.println(msg);
 
   checkBootButton(5);
 }
 
 void checkBootButton(unsigned int seconds){
-  unsigned int loops = seconds*5;
-  while(loops-- > 0){
+  int loops = seconds*5;
+  while(--loops > 0){
     if(digitalRead(BOOT_BUTTON) == LOW) {
       delay(200);
       if(digitalRead(BOOT_BUTTON) == LOW){
@@ -120,18 +126,19 @@ String readUART(String prompt) {
       }
     }
   }  
+  input.trim();                                           // Remove trailing whitespaces
   return input;                                           // Return the collected input
 }
 
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
-    Serial.print("Attempting MQTT connection with username, ");
+    Serial.print("\nAttempting MQTT connection with username, ");
     Serial.print(mqtt_user);
-    Serial.println(" ...");
+    Serial.println(" ...\n");
 
-    if (client.connect("ESP32_MQTT", mqtt_user, mqtt_pass)) {
-      Serial.println("Connected");
+    if (client.connect(ID, mqtt_user, mqtt_pass)) {
+      Serial.println("Connected to MQTT Broker\n");
     }else{
       Serial.print("Failed, rc=");
       Serial.print(client.state());

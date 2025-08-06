@@ -45,12 +45,16 @@ if __name__ == "__main__":
 
     print(f"\nConnecting to MQTT Broker using the following parameters...\nIP: {ip}\nPort: {port}\nUsername: {username}\nRouting Key: {routingKey}\n")
 
-    client = mqtt.Client()
-    client.username_pw_set(username, password=password)
-    client.connect(ip, port) 
+    try: 
+        client = mqtt.Client()
+        client.username_pw_set(username, password=password)
+        client.connect(ip, port) 
 
-    client.on_connect = on_connect       #attach function to callback
-    client.on_message = on_message       #attach function to callback
+        client.on_connect = on_connect       #attach function to callback
+        client.on_message = on_message       #attach function to callback
 
-    client.subscribe(routingKey) 
-    client.loop_forever()                 #start the loop
+        client.subscribe(routingKey) 
+        client.loop_forever()                 #start the loop
+
+    except Exception as e:
+        print(f"\nAn error occurred: {e}\n")

@@ -21,11 +21,23 @@ if __name__ == "__main__":
     choice = input("Would you like to enter using saved values? (Y/N):").strip().upper()
 
     if not ip or not port or not username or not routingKey or choice == 'N':
-        ip = input("Enter MQTT broker IP: ").strip()
-        port = int(input("Enter MQTT broker port: ").strip())
-        username = input("Enter MQTT username: ").strip()
-        password = input("Enter MQTT password: ").strip()
-        routingKey = input("Enter MQTT routing key: ").strip()
+        ready = False
+        while not ready:
+            ip = input("Enter MQTT broker IP: ").strip()
+            port = int("0" + input("Enter MQTT broker port: ").strip())
+            username = input("Enter MQTT username: ").strip()
+            password = input("Enter MQTT password: ").strip()
+            routingKey = input("Enter MQTT routing key: ").strip()
+
+            if not ip:
+                ip = "localhost"
+            if not port:
+                port = 5672
+
+            if username and routingKey:
+                ready = True
+            else:
+                print("\nUsername and routing key cannot be empty. Please try again.\n")
 
         exchange = login_details.get("exchange", "").strip()
         queue = login_details.get("queue", "").strip()

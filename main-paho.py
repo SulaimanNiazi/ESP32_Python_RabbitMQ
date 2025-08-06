@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     choice = input("Would you like to enter using saved values? (Y/N):").strip().upper()
 
-    if not ip or not port or not username or not password or not routingKey or choice == 'N':
+    if not ip or not port or not username or not routingKey or choice == 'N':
         ip = input("Enter MQTT broker IP: ").strip()
         port = int(input("Enter MQTT broker port: ").strip())
         username = input("Enter MQTT username: ").strip()

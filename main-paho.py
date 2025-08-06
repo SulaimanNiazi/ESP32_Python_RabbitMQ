@@ -16,29 +16,34 @@ if __name__ == "__main__":
     port = login_details.get("port", 5672)
     username = login_details.get("username", "admin1").strip()
     password = login_details.get("password", "").strip()
-    channel = login_details.get("channel", "").strip()
+    routingKey = login_details.get("routing key", "").strip()
 
     choice = input("Would you like to enter using saved values? (Y/N):").strip().upper()
 
-    if not ip or not port or not username or not password or not channel or choice == 'N':
+    if not ip or not port or not username or not password or not routingKey or choice == 'N':
         ip = input("Enter MQTT broker IP: ").strip()
         port = int(input("Enter MQTT broker port: ").strip())
         username = input("Enter MQTT username: ").strip()
         password = input("Enter MQTT password: ").strip()
-        channel = input("Enter MQTT channel: ").strip()
+        routingKey = input("Enter MQTT routing key: ").strip()
+
+        exchange = login_details.get("exchange", "").strip()
+        queue = login_details.get("queue", "").strip()
 
         loginDictionary = {
             "ip": ip,
             "port": port,
             "username": username,
             "password": password,
-            "channel": channel
+            "routing key": routingKey,
+            "exchange": exchange,
+            "queue": queue
         }
 
         with open("login-details.json", "w") as saveFile:
             json.dump(loginDictionary, saveFile, indent=2)
 
-    print(f"\nConnecting to MQTT broker at {ip}:{port} with user {username} on channel {channel}...\n")
+    print(f"\nConnecting to MQTT Broker using the following parameters...\nIP: {ip}\nPort: {port}\nUsername: {username}\nRouting Key: {routingKey}\n")
 
     client = mqtt.Client()
     client.username_pw_set(username, password=password)
@@ -47,5 +52,5 @@ if __name__ == "__main__":
     client.on_connect = on_connect       #attach function to callback
     client.on_message = on_message       #attach function to callback
 
-    client.subscribe(channel) 
+    client.subscribe(routingKey) 
     client.loop_forever()                 #start the loop

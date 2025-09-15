@@ -4,28 +4,29 @@
   //  you may not use this file except in compliance with the License.
   //  You may obtain a copy of the License at
 
-  //      http://www.apache.org/licenses/LICENSE-2.0
+  //  http://www.apache.org/licenses/LICENSE-2.0
 
-  //  Unless required by applicable law or agreed to in writing, software
-  //  distributed under the License is distributed on an "AS IS" BASIS,
+  //  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
   //  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  //  See the License for the specific language governing permissions and
-  //  limitations under the License.
+  //  See the License for the specific language governing permissions and limitations under the License.
 
 #include <WiFi.h>
 #include <Preferences.h>
 #include <PubSubClient.h>
 
 #define BOOT_BUTTON 0
+#define MAX_LENGTH 256
 
-char mqtt_user [20], mqtt_pass [20], ID [20], routingKey [20];
-int count = 0;
+char mqtt_user [20], mqtt_pass [20], ID [20], routingKey [20], buffer [MAX_LENGTH];
+unsigned int count = 0, delay_s = 5;
+bool manual = false;
 
+String input;
 Preferences prefs;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-void setup() {
+void setup(){
   pinMode(BOOT_BUTTON, INPUT_PULLUP);  // Enable internal pull-up
   
   Serial.begin(115200);
@@ -61,46 +62,59 @@ void setup() {
 
   prefs.end();
 
-  Serial.print("\n\nConnecting to ");
-  Serial.print(ssid);
-  Serial.print(" ");
+  Serial.print("\r\n\r\nConnecting to " + ssid + " ");
 
   WiFi.begin(ssid, wifiPass);
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+  while(WiFi.status() != WL_CONNECTED){
     Serial.print(".");
-    checkBootButton(0);
+    checkBootButton(1);
   }
 
-  Serial.println("\n\nWiFi Connected\nIP address: ");
-  Serial.println(WiFi.localIP());
+  Serial.print("\r\n\r\nWiFi Connected\r\nIP address: ");
+  Serial.print(WiFi.localIP());
+  Serial.println("\r");
 
-  static char mqtt_server [16];
-  ip.toCharArray(mqtt_server, sizeof(mqtt_server));
+  static char mqtt_server [50] = {};
+  ip.toCharArray(mqtt_server, ip.length());
   username.toCharArray(mqtt_user, sizeof(mqtt_user));
   mqttPass.toCharArray(mqtt_pass, sizeof(mqtt_pass));
   key.toCharArray(routingKey, sizeof(routingKey));
   id.toCharArray(ID, sizeof(ID));
 
-  Serial.print("\nSetting server at IP: ");
-  Serial.println(mqtt_server);
+  Serial.println("\nSetting server at IP: " + ip + "\r");
   client.setServer(mqtt_server, 1883);
+
+  if(client.connected()){
+    Serial.println("Server Established Successfully\r");
+  } else {
+    Serial.println("Server Failed\r");
+  }
+  
+  readUART("Do you want to enter manual mode for this run? (Y/N(default)): ");
+  if((input[0] == 'y')||(input[0] == 'Y')){
+    manual = true;
+    delay_s = 1;
+  }
 }
 
 void loop(){
-  char msg[8];
-
   if (!client.connected()) {
     reconnect();
   }
 
-  sprintf(msg,"%d",count++);
-  client.publish(routingKey, msg);
-  Serial.print("message sent: ");
-  Serial.println(msg);
+  if(manual){
+    readUART("Input message: ");
+    input.toCharArray(buffer, sizeof(buffer));
+  } else {
+    sprintf(buffer,"%d",count++);
+  }
+  client.publish(routingKey, buffer);
+  Serial.print("Message sent: ");
+  Serial.print(buffer);
+  Serial.println("\r");
 
-  checkBootButton(5);
+  checkBootButton(delay_s);
 }
 
 void checkBootButton(unsigned int seconds){
@@ -119,22 +133,23 @@ void checkBootButton(unsigned int seconds){
   }
 }
 
-String readUART(String prompt) {
-  String input = "";
+String readUART(String prompt){
+  input = "";
   Serial.print(prompt);
   while(1){
-    if (Serial.available() > 0){                         // Wait for the UART recieve buffer to get a byte
+    if(Serial.available() > 0){                           // Wait for the UART recieve buffer to get a byte
       byte inByte = Serial.read();                        // Read the byte from UART
-      if (inByte == 10) {                                 // Line Feed (LF)
-        Serial.println();
+      if((inByte == 0x0d)||(inByte == 10)){               // Line Feed (LF)
+        Serial.println("\r");
         break;
       }
-      if (inByte == 8) {                                  // Backspace (BS)
-        if (input.length() > 0) {
+      if(inByte == 0x08){                                 // Backspace (BS)
+        if(input.length() > 0){
           input.remove(input.length() - 1);               // Remove last character
           Serial.print("\b \b");                          // Move the cursor back, print a space, and move it back again
         }
-      } else {
+      }
+      else if(input.length() < MAX_LENGTH){
         input += (char)inByte;                            // Append the received character to the input string
         Serial.print((char)inByte);                       // Print the character
       }
@@ -144,19 +159,19 @@ String readUART(String prompt) {
   return input;                                           // Return the collected input
 }
 
-void reconnect() {
+void reconnect(){
   // Loop until we're reconnected
-  while (!client.connected()) {
+  while(!client.connected()){
     Serial.print("\nAttempting MQTT connection with username, ");
     Serial.print(mqtt_user);
-    Serial.println(" ...\n");
+    Serial.println(" ...\r\n");
 
-    if (client.connect(ID, mqtt_user, mqtt_pass)) {
-      Serial.println("Connected to MQTT Broker\n");
+    if(client.connect(ID, mqtt_user, mqtt_pass)){
+      Serial.println("Connected to MQTT Broker\r\n");
     }else{
       Serial.print("Failed, rc=");
       Serial.print(client.state());
-      Serial.println(" trying again in 5 seconds...");
+      Serial.println(" trying again in 5 seconds...\r");
       checkBootButton(5);
     }
   }

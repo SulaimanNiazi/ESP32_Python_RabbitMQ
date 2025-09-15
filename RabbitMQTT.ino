@@ -17,7 +17,7 @@
 #define BOOT_BUTTON 0
 #define MAX_LENGTH 256
 
-char mqtt_user [20], mqtt_pass [20], ID [20], routingKey [20], buffer [MAX_LENGTH];
+char mqtt_user [50], mqtt_pass [50], ID [20], routingKey [20], buffer [MAX_LENGTH];
 unsigned int count = 0, delay_s = 5;
 bool manual = false;
 
@@ -36,24 +36,24 @@ void setup(){
 
   String ssid = prefs.getString("ssid", ""),
     wifiPass = prefs.getString("wifi password", ""),
-    ip = prefs.getString("IP", ""),
+    server = prefs.getString("server", ""),
     username = prefs.getString("username", ""),
     mqttPass = prefs.getString("mqtt password", ""),
-    id = prefs.getString("ID", "ESP32_MQTT"),
+    id = prefs.getString("ID", "ESP32"),
     key = prefs.getString("routing key", "");
 
-  if((ssid == "") || (ip == "") || (username == "") || (key == "")){
+  if((ssid == "") || (server == "") || (username == "") || (key == "")){
     ssid = readUART("Enter SSID: ");
     wifiPass = readUART("Enter Password: ");
-    ip = readUART("Enter mqtt server IP: ");
+    server = readUART("Enter mqtt server IP/Domain: ");
     username = readUART("Enter mqtt server username: ");
     mqttPass = readUART("Enter mqtt server password: ");
-    key = readUART("Enter Routing Key to use: ");
+    key = readUART("Enter Routing Key (Topic) to use: ");
     id = readUART("Enter ID for this device (optional): ");
 
     prefs.putString("ssid", ssid);
     prefs.putString("wifi password", wifiPass);
-    prefs.putString("IP", ip);
+    prefs.putString("server", server);
     prefs.putString("username", username);
     prefs.putString("mqtt password", mqttPass);
     prefs.putString("routing key", key);
@@ -75,21 +75,15 @@ void setup(){
   Serial.print(WiFi.localIP());
   Serial.println("\r");
 
-  static char mqtt_server [50] = {};
-  ip.toCharArray(mqtt_server, ip.length());
+  static char mqtt_server [50];
+  server.toCharArray(mqtt_server, sizeof(mqtt_server));
   username.toCharArray(mqtt_user, sizeof(mqtt_user));
   mqttPass.toCharArray(mqtt_pass, sizeof(mqtt_pass));
   key.toCharArray(routingKey, sizeof(routingKey));
   id.toCharArray(ID, sizeof(ID));
 
-  Serial.println("\nSetting server at IP: " + ip + "\r");
+  Serial.println("\nSetting server at, " + server + ":1883 \r");
   client.setServer(mqtt_server, 1883);
-
-  if(client.connected()){
-    Serial.println("Server Established Successfully\r");
-  } else {
-    Serial.println("Server Failed\r");
-  }
   
   readUART("Do you want to enter manual mode for this run? (Y/N(default)): ");
   if((input[0] == 'y')||(input[0] == 'Y')){
@@ -110,9 +104,7 @@ void loop(){
     sprintf(buffer,"%d",count++);
   }
   client.publish(routingKey, buffer);
-  Serial.print("Message sent: ");
-  Serial.print(buffer);
-  Serial.println("\r");
+  Serial.printf("Message sent: %s\r\n", buffer);
 
   checkBootButton(delay_s);
 }
@@ -162,16 +154,12 @@ String readUART(String prompt){
 void reconnect(){
   // Loop until we're reconnected
   while(!client.connected()){
-    Serial.print("\nAttempting MQTT connection with username, ");
-    Serial.print(mqtt_user);
-    Serial.println(" ...\r\n");
+    Serial.printf("\nAttempting MQTT connection with username, %s ...\r\n\n", mqtt_user);
 
     if(client.connect(ID, mqtt_user, mqtt_pass)){
       Serial.println("Connected to MQTT Broker\r\n");
     }else{
-      Serial.print("Failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" trying again in 5 seconds...\r");
+      Serial.printf("Failed, rc = %d, trying again in 5 seconds...\r\n", client.state());
       checkBootButton(5);
     }
   }
